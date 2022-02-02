@@ -48,6 +48,16 @@ void shift_rows(unsigned char* arr) {
     }
 }
 
+void mix_columns(unsigned char* arr) {
+    for (int c = 0; c < 4; c++) {
+        unsigned char col[] = {arr[c], arr[c+4], arr[c+8], arr[c+12]};
+        arr[c] = MultiplyBy2[col[0]] ^ MultiplyBy3[col[1]] ^ col[2] ^ col[3];
+        arr[c + 4] = col[0] ^ MultiplyBy2[col[1]] ^ MultiplyBy3[col[2]] ^ col[3];
+        arr[c + 8] = col[0] ^ col[1] ^ MultiplyBy2[col[2]] ^ MultiplyBy3[col[3]];
+        arr[c + 12] = MultiplyBy3[col[0]] ^ col[1] ^ col[2] ^ MultiplyBy2[col[3]];
+    }
+}
+
 #pragma endregion array operations
 
 int main()
@@ -70,6 +80,10 @@ int main()
 
     printf("After Shift Rows:\n");
     shift_rows(test_sub_1);
+    print_box(test_sub_1);
+
+    printf("After Mix Columns:\n");
+    mix_columns(test_sub_1);
     print_box(test_sub_1);
 
     return 0;
