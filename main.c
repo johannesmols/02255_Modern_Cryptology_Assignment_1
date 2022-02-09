@@ -1,90 +1,41 @@
 #include <stdio.h>
 
-#include "constants.c"
-
-#pragma region Printing
-
-void print_box(const unsigned char* box) {
-    for (int i = 0; i < 16; i++) {
-        printf("%02x", box[i]);
-        if ((i + 1) % 4 == 0) {
-            printf("\n");
-        } else {
-            printf(" ");
-        }
-    }
-    printf("\n");
-}
-
-#pragma endregion Printing
-
-#pragma region Array operations
-
-void sub_bytes(unsigned char* arr, const unsigned char* s_box) {
-    for (int i = 0; i < 16; i++) {
-        arr[i] = s_box[arr[i]];
-    }
-}
-
-void swap(unsigned char* arr, int i1, int i2) {
-    unsigned char tmp = arr[i1];
-    arr[i1] = arr[i2];
-    arr[i2] = tmp;
-}
-
-void shift_left(unsigned char* arr, int start, int end, int n) {
-    for (int iter = 0; iter < n; iter++) {
-        unsigned char first = arr[start];
-        for (int i = start; i < end; i++) {
-            swap(arr, i, i + 1);
-        }
-        arr[end] = first;
-    }
-}
-
-void shift_rows(unsigned char* arr) {
-    for (int r = 0; r < 4; r++) {
-        shift_left(arr, r * 4, r * 4 + 3, r);
-    }
-}
-
-void mix_columns(unsigned char* arr) {
-    for (int c = 0; c < 4; c++) {
-        unsigned char col[] = {arr[c], arr[c+4], arr[c+8], arr[c+12]};
-        arr[c] = MultiplyBy2[col[0]] ^ MultiplyBy3[col[1]] ^ col[2] ^ col[3];
-        arr[c + 4] = col[0] ^ MultiplyBy2[col[1]] ^ MultiplyBy3[col[2]] ^ col[3];
-        arr[c + 8] = col[0] ^ col[1] ^ MultiplyBy2[col[2]] ^ MultiplyBy3[col[3]];
-        arr[c + 12] = MultiplyBy3[col[0]] ^ col[1] ^ col[2] ^ MultiplyBy2[col[3]];
-    }
-}
-
-#pragma endregion array operations
+#include "AES/AES.h"
 
 int main()
 {
-    unsigned char test_sub_1[] = {0x19, 0xa0, 0x9a, 0xe9,
-                                  0x3d, 0xf4, 0xc6, 0xf8,
-                                  0xe3, 0xe2, 0x8d, 0x48,
-                                  0xbe, 0x2b, 0x2a, 0x08};
+    word key[4] = {0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f};
 
-    printf("Original:\n");
-    print_box(test_sub_1);
+    AES* aes = create_aes_instance(key, 4);
 
-    sub_bytes(test_sub_1, SBox);
-    printf("After SubBytes:\n");
-    print_box(test_sub_1);
+    block message = {0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff};
 
-    /*sub_bytes(test_sub_1, InverseSBox);
-    printf("After Inverse SubBytes:\n");
-    print_box(test_sub_1);*/
+    printf("Original message:\n  ");
+    printf("%08x", message[0]);
+    printf("%08x", message[1]);
+    printf("%08x", message[2]);
+    printf("%08x", message[3]);
+    printf("\n");
 
-    printf("After Shift Rows:\n");
-    shift_rows(test_sub_1);
-    print_box(test_sub_1);
+    encrypt(aes, message);
 
-    printf("After Mix Columns:\n");
-    mix_columns(test_sub_1);
-    print_box(test_sub_1);
+    printf("Encrypted message:\n  ");
+    printf("%08x", message[0]);
+    printf("%08x", message[1]);
+    printf("%08x", message[2]);
+    printf("%08x", message[3]);
+    printf("\n");
+
+    decrypt(aes, message);
+
+    printf("Decrypted message:\n  ");
+    printf("%08x", message[0]);
+    printf("%08x", message[1]);
+    printf("%08x", message[2]);
+    printf("%08x", message[3]);
+    printf("\n");
+
+    delete_aes_instance(aes);
 
     return 0;
 }
