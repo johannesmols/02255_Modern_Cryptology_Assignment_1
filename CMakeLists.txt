@@ -3,4 +3,4 @@ project(02255_HW1_Group33 C)
 
 set(CMAKE_C_STANDARD 17)
 
-add_executable(02255_HW1_Group33 Custom_AES/main.c)
+add_executable(02255_HW1_Group33 main.c AES/aes.h AES/aes.c AES/constants.h)

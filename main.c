@@ -1,41 +1,18 @@
-#include <stdio.h>
-
-#include "AES/AES.h"
+#include "AES/aes.h"
 
 int main()
 {
-    word key[4] = {0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f};
+    const unsigned char input[] = {0x32, 0x88, 0x31, 0xe0,
+                                   0x43, 0x5a, 0x31, 0x37,
+                                   0xf6, 0x30, 0x98, 0x07,
+                                   0xa8, 0x8d, 0xa2, 0x34};
 
-    AES* aes = create_aes_instance(key, 4);
+    const unsigned char cipher_key[] = {0x2b, 0x28, 0xab, 0x09,
+                                        0x7e, 0xae, 0xf7, 0xcf,
+                                        0x15, 0xd2, 0x15, 0x4f,
+                                        0x16, 0xa6, 0x88, 0x3c};
 
-    block message = {0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff};
-
-    printf("Original message:\n  ");
-    printf("%08x", message[0]);
-    printf("%08x", message[1]);
-    printf("%08x", message[2]);
-    printf("%08x", message[3]);
-    printf("\n");
-
-    encrypt(aes, message);
-
-    printf("Encrypted message:\n  ");
-    printf("%08x", message[0]);
-    printf("%08x", message[1]);
-    printf("%08x", message[2]);
-    printf("%08x", message[3]);
-    printf("\n");
-
-    decrypt(aes, message);
-
-    printf("Decrypted message:\n  ");
-    printf("%08x", message[0]);
-    printf("%08x", message[1]);
-    printf("%08x", message[2]);
-    printf("%08x", message[3]);
-    printf("\n");
-
-    delete_aes_instance(aes);
+    unsigned char* encrypted = encrypt(input, cipher_key, 10); // example on p. 34 of FIPS 197
 
     return 0;
 }
