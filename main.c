@@ -20,18 +20,6 @@ const unsigned char DEFAULT_CIPHER_KEY[] = {0x2b, 0x28, 0xab, 0x09,
 
 const size_t DEFAULT_ROUNDS = 4;
 
-/// Reads a 32-char long hex string into a 4x4 block, reading row by row (not column by column!)
-unsigned char* block_from_string(const char* string) {
-    unsigned char* block = malloc(BLOCK_SIZE);
-    for (size_t i = 0; i < BLOCK_SIZE; i++) {
-        char sub_string[2], *ptr = sub_string;
-        memcpy(sub_string, &string[i * 2], 2);
-        sscanf(ptr, "%2hhx", &block[i]);
-    }
-
-    return block;
-}
-
 int main(int argc, char* argv[])
 {
     unsigned char *input;

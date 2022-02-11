@@ -1,9 +1,22 @@
 #include <malloc.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "helpers.h"
 
 const size_t BLOCK_SIZE = 16;
+
+/// Reads a 32-char long hex string into a 4x4 block, reading row by row (not column by column!)
+unsigned char* block_from_string(const char* string) {
+    unsigned char* block = malloc(BLOCK_SIZE);
+    for (size_t i = 0; i < BLOCK_SIZE; i++) {
+        char sub_string[2], *ptr = sub_string;
+        memcpy(sub_string, &string[i * 2], 2);
+        sscanf(ptr, "%2hhx", &block[i]);
+    }
+
+    return block;
+}
 
 /// Helper function to create a string with a single parameter in it.
 /// Source: https://stackoverflow.com/a/5172154/2102106

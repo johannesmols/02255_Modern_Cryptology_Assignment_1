@@ -1,8 +1,6 @@
 #include <malloc.h>
-#include <stdio.h>
 
 #include "square.h"
-#include "../AES/aes.h"
 #include "../Helpers/helpers.h"
 
 const size_t SETS = 256;
