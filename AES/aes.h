@@ -4,14 +4,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define DEBUG // comment this out to disable debug mode
-
-extern const size_t BLOCK_SIZE;
-
-void print(const unsigned char* block);
-void print_with_msg(const unsigned char* block, const char* msg);
-
-void swap_values(unsigned char* block, int i1, int i2);
+//#define DEBUG // comment this out to disable debug mode
 
 void xor_blocks(unsigned char* a, const unsigned char* b, size_t n);
 void sub_bytes(unsigned char* block, const unsigned char* s_box, size_t n);
