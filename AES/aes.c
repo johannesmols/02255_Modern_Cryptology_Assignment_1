@@ -130,7 +130,7 @@ unsigned char* encrypt(const unsigned char* block, const unsigned char* key, siz
     unsigned char round_key[BLOCK_SIZE];
     memcpy(round_key, key, BLOCK_SIZE);
 
-#if defined(DEBUG)
+#ifdef DEBUG_AES
     print_with_msg(data, format_str("Starting AES encryption with %d rounds and input data:", rounds));
     print_with_msg(round_key, "And encryption key:");
 #endif
@@ -138,7 +138,7 @@ unsigned char* encrypt(const unsigned char* block, const unsigned char* key, siz
     xor_blocks(data, round_key, BLOCK_SIZE); // initial XOR with key
     derive_next_key(round_key, 0);
 
-#if defined(DEBUG)
+#ifdef DEBUG_AES
     print_with_msg(data, "After initial XOR:");
     print_with_msg(round_key, "Derived key for next round:");
 #endif
@@ -148,7 +148,7 @@ unsigned char* encrypt(const unsigned char* block, const unsigned char* key, siz
             perform_round(data, round_key, false);
             derive_next_key(round_key, r);
 
-#if defined(DEBUG)
+#ifdef DEBUG_AES
             print_with_msg(data, format_str("After performing round %d:", r));
             print_with_msg(round_key, "Derived key for next round:");
 #endif
@@ -157,7 +157,7 @@ unsigned char* encrypt(const unsigned char* block, const unsigned char* key, siz
         }
     }
 
-#if defined(DEBUG)
+#ifdef DEBUG_AES
     print_with_msg(data, "Completed encryption with result:");
 #endif
 

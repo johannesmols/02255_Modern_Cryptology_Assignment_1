@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-//#define DEBUG // comment this out to disable debug mode
+//#define DEBUG_AES // comment this out to disable debug mode
 
 void xor_blocks(unsigned char* a, const unsigned char* b, size_t n);
 void sub_bytes(unsigned char* block, const unsigned char* s_box, size_t n);

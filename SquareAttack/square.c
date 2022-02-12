@@ -1,6 +1,7 @@
 #include <malloc.h>
 #include <limits.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "square.h"
 #include "../AES/aes.h"
@@ -64,14 +65,22 @@ unsigned char reverse_last_round(const unsigned char* block, unsigned char key, 
 
 /// Make a guess for a byte of the last round key in the given position, and return the array of best guesses.
 unsigned char* guess_round_key(unsigned char** lambda, size_t key_pos, size_t* no_of_guesses) {
-    unsigned char* correct_guesses = malloc(sizeof(unsigned char) * (UCHAR_MAX + 1));
+    unsigned char* correct_guesses = malloc(sizeof(unsigned char) * SETS);
     unsigned char correct_guesses_count = 0;
 
     for (unsigned char guess = 0; guess < (unsigned char) UCHAR_MAX; guess++) { // go through all possible guesses
-        unsigned char* values = malloc(sizeof(unsigned char) * (UCHAR_MAX + 1)); // store all 256 reversed values with guess
+        unsigned char* values = malloc(sizeof(unsigned char) * SETS); // store all 256 reversed values with guess
         for (size_t i = 0; i < UCHAR_MAX; i++) {
             values[i] = reverse_last_round(lambda[i], guess, key_pos);
         }
+
+#ifdef DEBUG_SQUARE
+        printf("Reversed values with guess %02x:\n", guess);
+        for (size_t i = 0; i < UCHAR_MAX; i++) {
+            printf("%02x ", values[i]);
+        }
+        printf("\n");
+#endif
 
         // Check whether XOR'ing all 256 reversed values gives 0. If it does, the guess might be correct.
         unsigned char result = values[0];

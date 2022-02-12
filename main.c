@@ -6,11 +6,7 @@
 #include "Helpers/helpers.h"
 #include "SquareAttack/square.h"
 
-// Example on p. 34 of FIPS 197
-const unsigned char DEFAULT_INPUT[] = {0x32, 0x88, 0x31, 0xe0,
-                                       0x43, 0x5a, 0x31, 0x37,
-                                       0xf6, 0x30, 0x98, 0x07,
-                                       0xa8, 0x8d, 0xa2, 0x34};
+//#define DEBUG_MAIN // comment this out to disable debug mode
 
 // Example on p. 34 of FIPS 197
 const unsigned char DEFAULT_CIPHER_KEY[] = {0x2b, 0x28, 0xab, 0x09,
@@ -23,30 +19,32 @@ const size_t LAMBDAS = 3;
 
 int main(int argc, char* argv[])
 {
-    unsigned char *input;
     unsigned char* key;
     size_t rounds = DEFAULT_ROUNDS;
 
-    if (argc != 4) { // first argument is executable name + path, therefore it is 4 and not 3
-        printf("WARNING: Provide exactly 3 arguments to the program: 16 bytes of input in hex, 16 bytes of cipher key in hex, and the number of rounds in decimal.\n");
+    if (argc != 3) { // first argument is executable name + path, therefore it is 3 and not 2
+        printf("WARNING: Provide exactly 2 arguments to the program: 16 bytes of cipher key in hex, and the number of rounds in decimal.\n");
         printf("Continuing with sample values.\n\n");
 
-        input = malloc(BLOCK_SIZE);
-        memcpy(input, DEFAULT_INPUT, BLOCK_SIZE);
         key = malloc(BLOCK_SIZE);
         memcpy(key, DEFAULT_CIPHER_KEY, BLOCK_SIZE);
     } else {
         // Parse the arguments as blocks, and the number of rounds
-        input = block_from_string(argv[1]);
         key = block_from_string(argv[2]);
         rounds = strtoul(argv[3], NULL, 10);
     }
 
-    // Encrypt the given input with the given key and number of rounds (should be 4 rounds for Square attack)
-    //unsigned char* encrypted_input = encrypt(input, key, rounds);
-
     // Generate multiple lambda sets to ensure that no false-positives are assumed to be correct guesses
     unsigned char*** lambdas = generate_lambda_sets(LAMBDAS);
+
+#ifdef DEBUG_MAIN
+    for (size_t l = 0; l < LAMBDAS; l++) {
+        printf("Lambda Set %zu:\n", l);
+        for (size_t b = 0; b < SETS; b++) {
+            print_with_msg(lambdas[l][b], format_str("Block %zu:", b));
+        }
+    }
+#endif
 
     // Encrypt all blocks in all lambda sets, with the same number of rounds
     for (size_t l = 0; l < LAMBDAS; l++) {
@@ -55,6 +53,15 @@ int main(int argc, char* argv[])
         }
     }
 
+#ifdef DEBUG_MAIN
+    for (size_t l = 0; l < LAMBDAS; l++) {
+        printf("Lambda Set %zu after encryption:\n", l);
+        for (size_t b = 0; b < SETS; b++) {
+            print_with_msg(lambdas[l][b], format_str("Block %zu:", b));
+        }
+    }
+#endif
+
     // Attempt to guess round keys for all lambdas
     // TODO: Currently just attempts to find byte at position 0
     for (size_t l = 0; l < LAMBDAS; l++) {
@@ -62,7 +69,7 @@ int main(int argc, char* argv[])
         unsigned char* correct_guesses = guess_round_key(lambdas[l], 0, &no_correct_guesses);
         printf("Found %zu correct guesses for set %zu.\n", no_correct_guesses, l);
         for (size_t i = 0; i < no_correct_guesses; i++) {
-            printf("Guess: %u\n", correct_guesses[i]);
+            printf("Guess: %02x\n", correct_guesses[i]);
         }
     }
 
@@ -102,9 +109,7 @@ int main(int argc, char* argv[])
     printf("Result: %02x", result);
 
     // Free up memory
-    free(input);
     free(key);
-    //free(encrypted_input);
     free(lambda);
 
     return 0;
