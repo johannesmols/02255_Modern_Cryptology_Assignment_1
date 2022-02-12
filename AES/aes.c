@@ -31,28 +31,10 @@ void shift_left(unsigned char* block, int start, int end, int n) {
     }
 }
 
-/// Shift a row in a block to the right, re-adding overflowing entries on the left side again.
-/// The start and end parameter define the index range of the operation, and N defines how often to repeat it.
-/// Certainly not the most efficient way of doing it, but hey, it works.
-void shift_right(unsigned char* block, int start, int end, int n) {
-    for (int iter = 0; iter < n; iter++) {
-        for (int i = end; i > start; i--) {
-            swap_values(block, i, i - 1);
-        }
-    }
-}
-
 /// Perform the ShiftRow operation on a block.
 void shift_rows(unsigned char* block) {
     for (int r = 1; r < 4; r++) { // start from 2nd row
         shift_left(block, r * 4, r * 4 + 3, r);
-    }
-}
-
-/// Perform the inverse ShiftRow operation on a block.
-void inv_shift_rows(unsigned char* block) {
-    for (int r = 1; r < 4; r++) { // start from 2nd row
-        shift_right(block, r * 4, r * 4 + 3, r);
     }
 }
 

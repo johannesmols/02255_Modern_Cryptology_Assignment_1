@@ -4,9 +4,8 @@
 
 #include "AES/aes.h"
 #include "Helpers/helpers.h"
+#include "Helpers/set.h"
 #include "SquareAttack/square.h"
-
-#define DEBUG_MAIN // comment this out to disable debug mode
 
 // Example on p. 34 of FIPS 197
 const unsigned char DEFAULT_CIPHER_KEY[] = {0x2b, 0x28, 0xab, 0x09,
@@ -15,16 +14,18 @@ const unsigned char DEFAULT_CIPHER_KEY[] = {0x2b, 0x28, 0xab, 0x09,
                                             0x16, 0xa6, 0x88, 0x3c};
 
 const size_t DEFAULT_ROUNDS = 4;
-const size_t LAMBDAS = 3;
 
-bool has_found_entire_last_round_key(const unsigned char* no_of_guesses) {
+/// Checks all sets of guesses (one set for each byte position) to see whether there is only one guess.
+/// If there is more than one, the search has to be continued until only one candidate is left, which will 100% be the correct one.
+bool has_found_entire_last_round_key(SimpleSet guesses[], size_t n) {
     bool all_have_exactly_one = true;
-    for (size_t i = 0; i < BLOCK_SIZE; i++) {
-        if (no_of_guesses[i] != 1) {
+    for (size_t i = 0; i < n; i++) {
+        if (set_length(&guesses[i]) != 1) {
             all_have_exactly_one = false;
             break;
         }
     }
+
     return all_have_exactly_one;
 }
 
@@ -45,20 +46,16 @@ int main(int argc, char* argv[])
         rounds = strtoul(argv[3], NULL, 10);
     }
 
-    // Holds an array of potentially correct key bytes for each position in the key. Updated after checking a new lambda set until only candidate is left.
-    unsigned char** potentially_correct = malloc(sizeof(unsigned char*) * BLOCK_SIZE);
+    print_with_msg(key, "Encrypting lambda sets with the cipher key:");
+
+    SimpleSet all_guesses[BLOCK_SIZE]; // Store all guesses for each position in the key in a set
     for (size_t i = 0; i < BLOCK_SIZE; i++) {
-        potentially_correct[i] = malloc(sizeof(unsigned char) * SETS); // Allocate space for 256 possible guesses, just in case
+        set_init(&all_guesses[i]); // Initialize each set
     }
 
-    unsigned char* no_of_guesses_in_list = malloc(sizeof(unsigned char) * BLOCK_SIZE); // Keeps track of how many guesses are in each array
-    for (size_t i = 0; i < BLOCK_SIZE; i++) {
-        no_of_guesses_in_list[i] = 0; // Initialize all values to 0
-    }
-
-    // Collect guesses from random lambda sets until there is only a single candidate left for all positions
+    // Collect all_guesses from random lambda sets until there is only a single candidate left for all positions
     size_t iter = 0;
-    while (!has_found_entire_last_round_key(no_of_guesses_in_list)) {
+    while (!has_found_entire_last_round_key(all_guesses, BLOCK_SIZE)) {
         iter++;
 
         // Generate lambda set with increasing values in position 0, and random values in other positions (that are the same across all blocks)
@@ -73,91 +70,44 @@ int main(int argc, char* argv[])
             size_t no_of_guesses;
             unsigned char* guesses = guess_round_key(lambda, pos, &no_of_guesses);
 
-            if (no_of_guesses_in_list[pos] == 0) {
-                // No guesses have been added yet, just add them all
-                for (size_t g = 0; g < no_of_guesses; g++) {
-                    potentially_correct[pos][no_of_guesses_in_list[pos]] = guesses[g];
-                    no_of_guesses_in_list[pos]++;
-                }
-            } else if (no_of_guesses_in_list[pos] > 1) {
-                // Remove any guesses that are not in the new guesses, because that means they are not correct
-#ifdef DEBUG_MAIN
-                for (size_t i = 0; i < BLOCK_SIZE; i++) {
-                    printf("Guesses for position %zu (%hhu entries):\n", i, no_of_guesses_in_list[i]);
-                    for (size_t g = 0; g < no_of_guesses_in_list[i]; g++) {
-                        printf("%02x ", potentially_correct[i][g]);
-                    }
-                    printf("\n");
-                }
-#endif
+            // Create a new set containing the new guesses, and form an intersection with the existing guesses so that only the matching ones remain
+            SimpleSet new_guesses;
+            set_init(&new_guesses);
+            for (size_t i = 0; i < no_of_guesses; i++) {
+                set_add(&new_guesses, format_str("%02x", guesses[i])); // Set implementation only supports strings, so we store it as a hex string
+            }
 
-                // TODO: Rework this. Is accessing out-of-bounds values and causes segmentation fault.
-                for (size_t g = 0; g < no_of_guesses_in_list[pos]; g++) {
-                    bool found = false;
-                    unsigned char to_find = potentially_correct[pos][g];
-                    for (size_t i = 0; i < no_of_guesses; i++) {
-                        if (guesses[i] == to_find) {
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if (!found) {
-                        // TODO: Basically copy existing list but without element that couldn't be found, and then update the no. of guesses in list array
-                        unsigned char* new_list = malloc(sizeof(unsigned char) * (no_of_guesses_in_list[pos] - 1));
-                        for (size_t i = 0; i < no_of_guesses_in_list[pos]; i++) {
-                            if (potentially_correct[pos][i] != to_find) {
-                                new_list[i] = potentially_correct[pos][i];
-                                // TODO: This kinda skips an entry, gotta rework
-                            }
-                        }
-
-                        potentially_correct[pos] = new_list;
-                        no_of_guesses_in_list[pos]--;
-                    }
-                }
+            if (set_length(&all_guesses[pos]) == 0) {
+                all_guesses[pos] = new_guesses; // No guessed added yet, so an intersection would be the empty set
+            } else {
+                SimpleSet intersection;
+                set_init(&intersection);
+                set_intersection(&intersection, &all_guesses[pos], &new_guesses); // The intersection only contains the guesses contained in all iterations
+                set_destroy(&all_guesses[pos]); // destroy old set
+                all_guesses[pos] = intersection;
             }
         }
     }
 
-    // Print out the values found for each position
-    printf("Found last round key by reversing %zu lambda sets.\n", iter);
+    // Print out the last round key that was found
+    char* key_guess = malloc(sizeof(char) * BLOCK_SIZE * 2); // 32-char long key in hex format
     for (size_t i = 0; i < BLOCK_SIZE; i++) {
-        printf("Correct guess for position %zu: %02x.\n", i, potentially_correct[i][0]);
+        size_t size;
+        char** guesses = set_to_array(&all_guesses[i], &size);
+        char* correct_guess = guesses[0]; // Impossible that it contains more than 1 item
+        key_guess[i * 2] = correct_guess[0]; // First character of 2-char long hex code
+        key_guess[i * 2 + 1] = correct_guess[1]; // Second character of 2-char long hex code
     }
 
-    free(potentially_correct);
-    free(no_of_guesses_in_list);
+    unsigned char* key_block = block_from_string(key_guess);
+    print_with_msg(key_block, format_str("Found last round key after reversing %zu lambda sets:", iter));
 
-    return 0;
-
-    // TODO: Old code below
-
-    // Generate multiple lambda sets to ensure that no false-positives are assumed to be correct guesses
-    unsigned char*** lambdas = generate_lambda_sets(LAMBDAS);
-
-    // Encrypt all blocks in all lambda sets, with the same number of rounds
-    for (size_t l = 0; l < LAMBDAS; l++) {
-        for (size_t i = 0; i < SETS; i++) {
-            lambdas[l][i] = encrypt(lambdas[l][i], key, rounds);
-        }
+    // Clear memory
+    for (size_t i = 0; i < BLOCK_SIZE; i++) {
+        set_destroy(&all_guesses[i]);
     }
-
-    // Attempt to guess round keys for all lambdas
-    // TODO: Currently just attempts to find byte at position 0
-    for (size_t l = 0; l < LAMBDAS; l++) {
-        size_t no_correct_guesses;
-        unsigned char* correct_guesses = guess_round_key(lambdas[l], 6, &no_correct_guesses);
-        printf("Found %zu correct guesses for set %zu.\n", no_correct_guesses, l);
-        for (size_t i = 0; i < no_correct_guesses; i++) {
-            printf("Guess: %02x\n", correct_guesses[i]);
-        }
-    }
-
-    return 0;
 
     free(key);
-    free(lambdas);
-
-    return 0;
+    free(key_guess);
+    free(key_block);
 }
