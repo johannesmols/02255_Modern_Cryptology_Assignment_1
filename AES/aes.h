@@ -9,6 +9,7 @@
 void xor_blocks(unsigned char* a, const unsigned char* b, size_t n);
 void sub_bytes(unsigned char* block, const unsigned char* s_box, size_t n);
 void shift_rows(unsigned char* block);
+void inv_shift_rows(unsigned char* block);
 void mix_columns(unsigned char* block);
 
 void derive_next_key(unsigned char* key, size_t round);

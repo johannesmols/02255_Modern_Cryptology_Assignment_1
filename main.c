@@ -19,6 +19,7 @@ const unsigned char DEFAULT_CIPHER_KEY[] = {0x2b, 0x28, 0xab, 0x09,
                                             0x16, 0xa6, 0x88, 0x3c};
 
 const size_t DEFAULT_ROUNDS = 4;
+const size_t LAMBDAS = 3;
 
 int main(int argc, char* argv[])
 {
@@ -42,7 +43,31 @@ int main(int argc, char* argv[])
     }
 
     // Encrypt the given input with the given key and number of rounds (should be 4 rounds for Square attack)
-    unsigned char* encrypted_input = encrypt(input, key, rounds);
+    //unsigned char* encrypted_input = encrypt(input, key, rounds);
+
+    // Generate multiple lambda sets to ensure that no false-positives are assumed to be correct guesses
+    unsigned char*** lambdas = generate_lambda_sets(LAMBDAS);
+
+    // Encrypt all blocks in all lambda sets, with the same number of rounds
+    for (size_t l = 0; l < LAMBDAS; l++) {
+        for (size_t i = 0; i < SETS; i++) {
+            lambdas[l][i] = encrypt(lambdas[l][i], key, rounds);
+        }
+    }
+
+    // Attempt to guess round keys for all lambdas
+    // TODO: Currently just attempts to find byte at position 0
+    for (size_t l = 0; l < LAMBDAS; l++) {
+        size_t no_correct_guesses;
+        unsigned char* correct_guesses = guess_round_key(lambdas[l], 0, &no_correct_guesses);
+        printf("Found %zu correct guesses for set %zu.\n", no_correct_guesses, l);
+        for (size_t i = 0; i < no_correct_guesses; i++) {
+            printf("Guess: %u\n", correct_guesses[i]);
+        }
+    }
+
+    /// TODO: Old code below
+    return 0;
 
     // Generate a lambda set
     unsigned char** lambda = generate_lambda_set();
@@ -50,17 +75,22 @@ int main(int argc, char* argv[])
     // Encrypt all blocks in the lambda set, with the same number of rounds
     for (size_t i = 0; i < SETS; i++) {
         lambda[i] = encrypt(lambda[i], key, rounds);
-        //print_with_msg(lambda[i], format_str("Set %d", i));
     }
 
     // TODO: Just for testing, needs to be guessed later
-    unsigned char last_round_key[] = {0x3d, 0x47, 0x1e, 0x6d,
+    /*unsigned char last_round_key[] = {0x3d, 0x47, 0x1e, 0x6d,
                                       0x80, 0x16, 0x23, 0x7a,
                                       0x47, 0xfe, 0x7e, 0x88,
-                                      0x7d, 0x3e, 0x44, 0x3b};
+                                      0x7d, 0x3e, 0x44, 0x3b};*/
+
+    unsigned char last_round_key[] = {0xef, 0xa8, 0xb6, 0xdb,
+                                      0x44, 0x52, 0x71, 0x0b,
+                                      0xa5, 0x5b, 0x25, 0xad,
+                                      0x41, 0x7f, 0x3b, 0x00};
+
 
     for (size_t i = 0; i < SETS; i++) {
-        reverse_last_round(lambda[i], last_round_key);
+        //reverse_last_round(lambda[i], last_round_key);
         //print_with_msg(lambda[i], format_str("Reversing round %d", i));
     }
 
@@ -74,7 +104,7 @@ int main(int argc, char* argv[])
     // Free up memory
     free(input);
     free(key);
-    free(encrypted_input);
+    //free(encrypted_input);
     free(lambda);
 
     return 0;

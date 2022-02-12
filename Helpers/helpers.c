@@ -1,6 +1,8 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <limits.h>
 
 #include "helpers.h"
 
@@ -50,4 +52,26 @@ void swap_values(unsigned char* block, int i1, int i2) {
     unsigned char tmp = block[i1];
     block[i1] = block[i2];
     block[i2] = tmp;
+}
+
+/// Generate a random number from 0 to the limit
+/// Source: https://stackoverflow.com/a/2999130/2102106
+int random_with_limit(int limit) {
+    int divisor = RAND_MAX / (limit + 1);
+    int value;
+
+    do {
+        value = rand() / divisor;
+    } while (value > limit);
+
+    return value;
+}
+
+/// Generate a 4x4 block with random values
+unsigned char* generate_random_block() {
+    unsigned char* block = malloc(sizeof(unsigned char) * BLOCK_SIZE);
+    for (size_t i = 0; i < BLOCK_SIZE; i++) {
+        block[i] = random_with_limit(UCHAR_MAX);
+    }
+    return block;
 }
