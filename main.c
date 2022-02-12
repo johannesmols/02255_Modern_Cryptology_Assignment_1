@@ -6,7 +6,7 @@
 #include "Helpers/helpers.h"
 #include "SquareAttack/square.h"
 
-//#define DEBUG_MAIN // comment this out to disable debug mode
+#define DEBUG_MAIN // comment this out to disable debug mode
 
 // Example on p. 34 of FIPS 197
 const unsigned char DEFAULT_CIPHER_KEY[] = {0x2b, 0x28, 0xab, 0x09,
@@ -47,13 +47,13 @@ int main(int argc, char* argv[])
 
     // Holds an array of potentially correct key bytes for each position in the key. Updated after checking a new lambda set until only candidate is left.
     unsigned char** potentially_correct = malloc(sizeof(unsigned char*) * BLOCK_SIZE);
-    unsigned char* no_of_guesses_in_list = malloc(sizeof(unsigned char) * SETS); // Keeps track of how many guesses are in what array
-    for (size_t i = 0; i < SETS; i++) {
-        no_of_guesses_in_list[i] = 0; // Initialize all values to 0
+    for (size_t i = 0; i < BLOCK_SIZE; i++) {
+        potentially_correct[i] = malloc(sizeof(unsigned char) * SETS); // Allocate space for 256 possible guesses, just in case
     }
 
+    unsigned char* no_of_guesses_in_list = malloc(sizeof(unsigned char) * BLOCK_SIZE); // Keeps track of how many guesses are in each array
     for (size_t i = 0; i < BLOCK_SIZE; i++) {
-        potentially_correct[i] = malloc(sizeof(unsigned char) * SETS); // Allocate space for 256 possible guesses
+        no_of_guesses_in_list[i] = 0; // Initialize all values to 0
     }
 
     // Collect guesses from random lambda sets until there is only a single candidate left for all positions
@@ -67,6 +67,7 @@ int main(int argc, char* argv[])
             lambda[i] = encrypt(lambda[i], key, rounds);
         }
 
+        // For each of the 16 positions, guess the byte of the key corresponding to the position, using the encrypted lambda set
         for (size_t pos = 0; pos < BLOCK_SIZE; pos++) {
             // Guess the possible round keys for each position in the block
             size_t no_of_guesses;
@@ -78,30 +79,51 @@ int main(int argc, char* argv[])
                     potentially_correct[pos][no_of_guesses_in_list[pos]] = guesses[g];
                     no_of_guesses_in_list[pos]++;
                 }
-            } else {
+            } else if (no_of_guesses_in_list[pos] > 1) {
                 // Remove any guesses that are not in the new guesses, because that means they are not correct
+#ifdef DEBUG_MAIN
+                for (size_t i = 0; i < BLOCK_SIZE; i++) {
+                    printf("Guesses for position %zu (%hhu entries):\n", i, no_of_guesses_in_list[i]);
+                    for (size_t g = 0; g < no_of_guesses_in_list[i]; g++) {
+                        printf("%02x ", potentially_correct[i][g]);
+                    }
+                    printf("\n");
+                }
+#endif
 
                 // TODO: Rework this. Is accessing out-of-bounds values and causes segmentation fault.
-                /*for (size_t g = no_of_guesses_in_list[pos] - 1; g >= 0; g--) {
+                for (size_t g = 0; g < no_of_guesses_in_list[pos]; g++) {
                     bool found = false;
+                    unsigned char to_find = potentially_correct[pos][g];
                     for (size_t i = 0; i < no_of_guesses; i++) {
-                        if (potentially_correct[pos][g] == guesses[i]) {
+                        if (guesses[i] == to_find) {
                             found = true;
                             break;
                         }
                     }
 
                     if (!found) {
-                        no_of_guesses_in_list--; // Can't really remove it from list, but can just decrease the no. of guesses since we are iterating backwards
+                        // TODO: Basically copy existing list but without element that couldn't be found, and then update the no. of guesses in list array
+                        unsigned char* new_list = malloc(sizeof(unsigned char) * (no_of_guesses_in_list[pos] - 1));
+                        for (size_t i = 0; i < no_of_guesses_in_list[pos]; i++) {
+                            if (potentially_correct[pos][i] != to_find) {
+                                new_list[i] = potentially_correct[pos][i];
+                                // TODO: This kinda skips an entry, gotta rework
+                            }
+                        }
+
+                        potentially_correct[pos] = new_list;
+                        no_of_guesses_in_list[pos]--;
                     }
-                }*/
+                }
             }
         }
     }
 
     // Print out the values found for each position
+    printf("Found last round key by reversing %zu lambda sets.\n", iter);
     for (size_t i = 0; i < BLOCK_SIZE; i++) {
-        printf("Correct guess for position %u: %02x.\n", i, potentially_correct[i][0]);
+        printf("Correct guess for position %zu: %02x.\n", i, potentially_correct[i][0]);
     }
 
     free(potentially_correct);
