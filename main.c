@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "AES/aes.h"
-#include "SquareAttack/square.h"
 #include "Helpers/helpers.h"
+#include "SquareAttack/square.h"
 
 // Example on p. 34 of FIPS 197
 const unsigned char DEFAULT_INPUT[] = {0x32, 0x88, 0x31, 0xe0,
@@ -52,6 +52,30 @@ int main(int argc, char* argv[])
         lambda[i] = encrypt(lambda[i], key, rounds);
         //print_with_msg(lambda[i], format_str("Set %d", i));
     }
+
+    // TODO: Just for testing, needs to be guessed later
+    unsigned char last_round_key[] = {0x3d, 0x47, 0x1e, 0x6d,
+                                      0x80, 0x16, 0x23, 0x7a,
+                                      0x47, 0xfe, 0x7e, 0x88,
+                                      0x7d, 0x3e, 0x44, 0x3b};
+
+    for (size_t i = 0; i < SETS; i++) {
+        reverse_last_round(lambda[i], last_round_key);
+        //print_with_msg(lambda[i], format_str("Reversing round %d", i));
+    }
+
+    unsigned char result = lambda[0][0];
+    for (size_t i = 1; i < SETS; i++) {
+        result ^= lambda[i][0];
+    }
+
+    printf("Result: %02x", result);
+
+    // Free up memory
+    free(input);
+    free(key);
+    free(encrypted_input);
+    free(lambda);
 
     return 0;
 }

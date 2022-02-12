@@ -1,6 +1,8 @@
 #include <malloc.h>
 
 #include "square.h"
+#include "../AES/aes.h"
+#include "../AES/constants.h"
 #include "../Helpers/helpers.h"
 
 const size_t SETS = 256;
@@ -21,4 +23,9 @@ unsigned char** generate_lambda_set() {
     }
 
     return lambda;
+}
+
+void reverse_last_round(unsigned char* block, unsigned char* key) {
+    xor_blocks(block, key, BLOCK_SIZE);
+    sub_bytes(block, InverseSBox, BLOCK_SIZE);
 }
