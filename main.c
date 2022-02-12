@@ -73,44 +73,8 @@ int main(int argc, char* argv[])
         }
     }
 
-    /// TODO: Old code below
-    return 0;
-
-    // Generate a lambda set
-    unsigned char** lambda = generate_lambda_set();
-
-    // Encrypt all blocks in the lambda set, with the same number of rounds
-    for (size_t i = 0; i < SETS; i++) {
-        lambda[i] = encrypt(lambda[i], key, rounds);
-    }
-
-    // TODO: Just for testing, needs to be guessed later
-    /*unsigned char last_round_key[] = {0x3d, 0x47, 0x1e, 0x6d,
-                                      0x80, 0x16, 0x23, 0x7a,
-                                      0x47, 0xfe, 0x7e, 0x88,
-                                      0x7d, 0x3e, 0x44, 0x3b};*/
-
-    unsigned char last_round_key[] = {0xef, 0xa8, 0xb6, 0xdb,
-                                      0x44, 0x52, 0x71, 0x0b,
-                                      0xa5, 0x5b, 0x25, 0xad,
-                                      0x41, 0x7f, 0x3b, 0x00};
-
-
-    for (size_t i = 0; i < SETS; i++) {
-        //reverse_last_round(lambda[i], last_round_key);
-        //print_with_msg(lambda[i], format_str("Reversing round %d", i));
-    }
-
-    unsigned char result = lambda[0][0];
-    for (size_t i = 1; i < SETS; i++) {
-        result ^= lambda[i][0];
-    }
-
-    printf("Result: %02x", result);
-
-    // Free up memory
     free(key);
-    free(lambda);
+    free(lambdas);
 
     return 0;
 }
