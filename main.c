@@ -17,6 +17,17 @@ const unsigned char DEFAULT_CIPHER_KEY[] = {0x2b, 0x28, 0xab, 0x09,
 const size_t DEFAULT_ROUNDS = 4;
 const size_t LAMBDAS = 3;
 
+bool has_found_entire_last_round_key(const unsigned char* no_of_guesses) {
+    bool all_have_exactly_one = true;
+    for (size_t i = 0; i < BLOCK_SIZE; i++) {
+        if (no_of_guesses[i] != 1) {
+            all_have_exactly_one = false;
+            break;
+        }
+    }
+    return all_have_exactly_one;
+}
+
 int main(int argc, char* argv[])
 {
     unsigned char* key;
@@ -34,17 +45,74 @@ int main(int argc, char* argv[])
         rounds = strtoul(argv[3], NULL, 10);
     }
 
-    // Generate multiple lambda sets to ensure that no false-positives are assumed to be correct guesses
-    unsigned char*** lambdas = generate_lambda_sets(LAMBDAS);
+    // Holds an array of potentially correct key bytes for each position in the key. Updated after checking a new lambda set until only candidate is left.
+    unsigned char** potentially_correct = malloc(sizeof(unsigned char*) * BLOCK_SIZE);
+    unsigned char* no_of_guesses_in_list = malloc(sizeof(unsigned char) * SETS); // Keeps track of how many guesses are in what array
+    for (size_t i = 0; i < SETS; i++) {
+        no_of_guesses_in_list[i] = 0; // Initialize all values to 0
+    }
 
-#ifdef DEBUG_MAIN
-    for (size_t l = 0; l < LAMBDAS; l++) {
-        printf("Lambda Set %zu:\n", l);
-        for (size_t b = 0; b < SETS; b++) {
-            print_with_msg(lambdas[l][b], format_str("Block %zu:", b));
+    for (size_t i = 0; i < BLOCK_SIZE; i++) {
+        potentially_correct[i] = malloc(sizeof(unsigned char) * SETS); // Allocate space for 256 possible guesses
+    }
+
+    // Collect guesses from random lambda sets until there is only a single candidate left for all positions
+    size_t iter = 0;
+    while (!has_found_entire_last_round_key(no_of_guesses_in_list)) {
+        iter++;
+
+        // Generate lambda set with increasing values in position 0, and random values in other positions (that are the same across all blocks)
+        unsigned char** lambda = generate_lambda_set();
+        for (size_t i = 0; i < SETS; i++) {
+            lambda[i] = encrypt(lambda[i], key, rounds);
+        }
+
+        for (size_t pos = 0; pos < BLOCK_SIZE; pos++) {
+            // Guess the possible round keys for each position in the block
+            size_t no_of_guesses;
+            unsigned char* guesses = guess_round_key(lambda, pos, &no_of_guesses);
+
+            if (no_of_guesses_in_list[pos] == 0) {
+                // No guesses have been added yet, just add them all
+                for (size_t g = 0; g < no_of_guesses; g++) {
+                    potentially_correct[pos][no_of_guesses_in_list[pos]] = guesses[g];
+                    no_of_guesses_in_list[pos]++;
+                }
+            } else {
+                // Remove any guesses that are not in the new guesses, because that means they are not correct
+
+                // TODO: Rework this. Is accessing out-of-bounds values and causes segmentation fault.
+                /*for (size_t g = no_of_guesses_in_list[pos] - 1; g >= 0; g--) {
+                    bool found = false;
+                    for (size_t i = 0; i < no_of_guesses; i++) {
+                        if (potentially_correct[pos][g] == guesses[i]) {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found) {
+                        no_of_guesses_in_list--; // Can't really remove it from list, but can just decrease the no. of guesses since we are iterating backwards
+                    }
+                }*/
+            }
         }
     }
-#endif
+
+    // Print out the values found for each position
+    for (size_t i = 0; i < BLOCK_SIZE; i++) {
+        printf("Correct guess for position %u: %02x.\n", i, potentially_correct[i][0]);
+    }
+
+    free(potentially_correct);
+    free(no_of_guesses_in_list);
+
+    return 0;
+
+    // TODO: Old code below
+
+    // Generate multiple lambda sets to ensure that no false-positives are assumed to be correct guesses
+    unsigned char*** lambdas = generate_lambda_sets(LAMBDAS);
 
     // Encrypt all blocks in all lambda sets, with the same number of rounds
     for (size_t l = 0; l < LAMBDAS; l++) {
@@ -53,25 +121,18 @@ int main(int argc, char* argv[])
         }
     }
 
-#ifdef DEBUG_MAIN
-    for (size_t l = 0; l < LAMBDAS; l++) {
-        printf("Lambda Set %zu after encryption:\n", l);
-        for (size_t b = 0; b < SETS; b++) {
-            print_with_msg(lambdas[l][b], format_str("Block %zu:", b));
-        }
-    }
-#endif
-
     // Attempt to guess round keys for all lambdas
     // TODO: Currently just attempts to find byte at position 0
     for (size_t l = 0; l < LAMBDAS; l++) {
         size_t no_correct_guesses;
-        unsigned char* correct_guesses = guess_round_key(lambdas[l], 0, &no_correct_guesses);
+        unsigned char* correct_guesses = guess_round_key(lambdas[l], 6, &no_correct_guesses);
         printf("Found %zu correct guesses for set %zu.\n", no_correct_guesses, l);
         for (size_t i = 0; i < no_correct_guesses; i++) {
             printf("Guess: %02x\n", correct_guesses[i]);
         }
     }
+
+    return 0;
 
     free(key);
     free(lambdas);

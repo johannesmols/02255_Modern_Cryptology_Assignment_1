@@ -25,11 +25,9 @@ void sub_bytes(unsigned char* block, const unsigned char* s_box, size_t n) {
 /// Certainly not the most efficient way of doing it, but hey, it works.
 void shift_left(unsigned char* block, int start, int end, int n) {
     for (int iter = 0; iter < n; iter++) {
-        unsigned char first = block[start];
         for (int i = start; i < end; i++) {
             swap_values(block, i, i + 1);
         }
-        block[end] = first; // TODO: Maybe unnecessary?
     }
 }
 
@@ -38,11 +36,9 @@ void shift_left(unsigned char* block, int start, int end, int n) {
 /// Certainly not the most efficient way of doing it, but hey, it works.
 void shift_right(unsigned char* block, int start, int end, int n) {
     for (int iter = 0; iter < n; iter++) {
-        unsigned char last = block[end];
         for (int i = end; i > start; i--) {
             swap_values(block, i, i - 1);
         }
-        block[start] = last; // TODO: Maybe unnecessary?
     }
 }
 
