@@ -7,15 +7,13 @@
 #include "Helpers/set.h"
 #include "SquareAttack/square.h"
 
-#define DEBUG_MAIN
-
 // Example on p. 34 of FIPS 197
 const unsigned char DEFAULT_CIPHER_KEY[] = {0x2b, 0x28, 0xab, 0x09,
                                             0x7e, 0xae, 0xf7, 0xcf,
                                             0x15, 0xd2, 0x15, 0x4f,
                                             0x16, 0xa6, 0x88, 0x3c};
 
-const size_t DEFAULT_ROUNDS = 4;
+const int DEFAULT_ROUNDS = 4;
 
 /// Checks all sets of guesses (one set for each byte position) to see whether there is only one guess.
 /// If there is more than one, the search has to be continued until only one candidate is left, which will 100% be the correct one.
@@ -84,7 +82,7 @@ int main(int argc, char* argv[])
 
             if (set_length(&all_guesses[pos]) == 0) {
                 all_guesses[pos] = new_guesses; // No guessed added yet, so an intersection would be the empty set
-            } else if (set_length(&new_guesses) > 0) { // Only create intersection if there are actually any new guesses
+            } else if (set_length(&new_guesses) > 0) { // Only create intersection if there are actually any new guesses (which should always be the case)
                 SimpleSet intersection;
                 set_init(&intersection);
                 set_intersection(&intersection, &all_guesses[pos], &new_guesses); // The intersection only contains the guesses contained in all iterations
@@ -93,7 +91,6 @@ int main(int argc, char* argv[])
             }
         }
 
-#ifdef DEBUG_MAIN
         // Print current guesses
         printf("Guesses after iteration %zu:\n", iter);
         for (size_t pos = 0; pos < BLOCK_SIZE; pos++) {
@@ -106,7 +103,6 @@ int main(int argc, char* argv[])
             printf("\n");
         }
         printf("\n");
-#endif
     }
 
     // Print out the last round key that was found
@@ -119,8 +115,19 @@ int main(int argc, char* argv[])
         key_guess[i * 2 + 1] = guesses[0][1]; // Second character of 2-char long hex code
     }
 
+    // Parse block from hex string back into a block, and print it out
     unsigned char* key_block = block_from_string(key_guess);
     print_with_msg(key_block, format_str("Found last round key after reversing %zu lambda sets:", iter));
+
+    // Derive previous round keys from the guessed one until original key is found
+    for (int round = DEFAULT_ROUNDS - 1; round >= 0; round--) {
+        derive_previous_key(key_block, round);
+        if (round == 0) {
+            print_with_msg(key_block, format_str("Recovered original cipher key:", round));
+        } else {
+            print_with_msg(key_block, format_str("Recovered previous round key (round %zu)", round));
+        }
+    }
 
     // Clear memory
     for (size_t i = 0; i < BLOCK_SIZE; i++) {

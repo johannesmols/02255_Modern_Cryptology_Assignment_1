@@ -89,6 +89,24 @@ void derive_next_key(unsigned char* key, size_t round) {
     rotate(key, false); // rotate clockwise back into correct position
 }
 
+/// Derive the previous round key from a given key, by reversing the operations performed in derive_next_key
+void derive_previous_key(unsigned char* key, size_t round) {
+    rotate(key, true); // rotate counter-clockwise so that it is easier to work with
+
+    xor_blocks(&key[0], &key[4], 4); // XOR last column with second-last column to get original value of last column
+    xor_blocks(&key[4], &key[8], 4); // XOR 2nd-last col with 2nd col
+    xor_blocks(&key[8], &key[12], 4); // XOR 2nd col with 1st col
+
+    unsigned char last_col[4];
+    memcpy(last_col, &key[0], 4); // Copy last col to repeat the key scheduling operations
+    shift_left(last_col, 0, 3, 1);
+    sub_bytes(&last_col[0], SBox, 4);
+    last_col[0] ^= RoundConstants[round];
+    xor_blocks(&key[12], last_col, 4); // XOR 1st col with inverted last col
+
+    rotate(key, false); // rotate clockwise back into correct position
+}
+
 /// Perform a round of AES. The last_round parameter decides whether the MixColumn step should be performed.
 void perform_round(unsigned char* block, unsigned char* key, bool last_round)
 {

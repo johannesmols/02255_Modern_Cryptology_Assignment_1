@@ -12,6 +12,7 @@ void shift_rows(unsigned char* block);
 void mix_columns(unsigned char* block);
 
 void derive_next_key(unsigned char* key, size_t round);
+void derive_previous_key(unsigned char* key, size_t round);
 void perform_round(unsigned char* block, unsigned char* key, bool last_round);
 
 unsigned char* encrypt(const unsigned char* block, const unsigned char* key, size_t rounds);
