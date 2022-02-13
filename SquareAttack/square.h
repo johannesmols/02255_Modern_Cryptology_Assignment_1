@@ -5,7 +5,7 @@
 
 extern const size_t SETS;
 
-unsigned char** generate_lambda_set();
+unsigned char** generate_lambda_set(unsigned int seed);
 unsigned char*** generate_lambda_sets(size_t n);
 
 unsigned char reverse_last_round(const unsigned char* block, unsigned char key, size_t key_pos);

@@ -7,6 +7,8 @@
 #include "Helpers/set.h"
 #include "SquareAttack/square.h"
 
+#define DEBUG_MAIN
+
 // Example on p. 34 of FIPS 197
 const unsigned char DEFAULT_CIPHER_KEY[] = {0x2b, 0x28, 0xab, 0x09,
                                             0x7e, 0xae, 0xf7, 0xcf,
@@ -35,8 +37,8 @@ int main(int argc, char* argv[])
     size_t rounds = DEFAULT_ROUNDS;
 
     if (argc != 3) { // first argument is executable name + path, therefore it is 3 and not 2
-        printf("WARNING: Provide exactly 2 arguments to the program: 16 bytes of cipher key in hex, and the number of rounds in decimal.\n");
-        printf("Continuing with sample values.\n\n");
+        printf("Provide a 16 byte cipher key in hex as an argument to use it as the cipher key "
+               "for the Square Attack. Continuing with sample cipher key.\n\n");
 
         key = malloc(BLOCK_SIZE);
         memcpy(key, DEFAULT_CIPHER_KEY, BLOCK_SIZE);
@@ -59,7 +61,8 @@ int main(int argc, char* argv[])
         iter++;
 
         // Generate lambda set with increasing values in position 0, and random values in other positions (that are the same across all blocks)
-        unsigned char** lambda = generate_lambda_set();
+        unsigned char** lambda = generate_lambda_set(iter);
+
         for (size_t i = 0; i < SETS; i++) {
             lambda[i] = encrypt(lambda[i], key, rounds);
         }
@@ -79,7 +82,7 @@ int main(int argc, char* argv[])
 
             if (set_length(&all_guesses[pos]) == 0) {
                 all_guesses[pos] = new_guesses; // No guessed added yet, so an intersection would be the empty set
-            } else {
+            } else if (set_length(&new_guesses) > 0) { // Only create intersection if there are actually any new guesses
                 SimpleSet intersection;
                 set_init(&intersection);
                 set_intersection(&intersection, &all_guesses[pos], &new_guesses); // The intersection only contains the guesses contained in all iterations
@@ -87,16 +90,31 @@ int main(int argc, char* argv[])
                 all_guesses[pos] = intersection;
             }
         }
+
+#ifdef DEBUG_MAIN
+        // Print current guesses
+        printf("Guesses after iteration %zu:\n", iter);
+        for (size_t pos = 0; pos < BLOCK_SIZE; pos++) {
+            size_t size;
+            char** guesses = set_to_array(&all_guesses[pos], &size);
+            printf("Current guesses for byte position %zu: ", pos);
+            for (size_t i = 0; i < size; i++) {
+                printf("%s ", guesses[i]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+#endif
     }
 
     // Print out the last round key that was found
     char* key_guess = malloc(sizeof(char) * BLOCK_SIZE * 2); // 32-char long key in hex format
     for (size_t i = 0; i < BLOCK_SIZE; i++) {
         size_t size;
-        char** guesses = set_to_array(&all_guesses[i], &size);
-        char* correct_guess = guesses[0]; // Impossible that it contains more than 1 item
-        key_guess[i * 2] = correct_guess[0]; // First character of 2-char long hex code
-        key_guess[i * 2 + 1] = correct_guess[1]; // Second character of 2-char long hex code
+        char** guesses = set_to_array(&all_guesses[i], &size); // Will only contain one item, otherwise we wouldn't be here
+        char* correct_guess = guesses[0];
+        key_guess[i * 2] = guesses[0][0]; // First character of 2-char long hex code
+        key_guess[i * 2 + 1] = guesses[0][1]; // Second character of 2-char long hex code
     }
 
     unsigned char* key_block = block_from_string(key_guess);

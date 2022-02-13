@@ -12,10 +12,10 @@ const size_t SETS = 256;
 #pragma region Lambdas
 
 /// Generate a lambda set with a unique value for the first byte and random values for the remaining positions (but the same random value in each block).
-unsigned char** generate_lambda_set() {
+unsigned char** generate_lambda_set(unsigned int seed) {
     unsigned char** lambda = malloc(sizeof(unsigned char*) * SETS);
 
-    unsigned char* arr = generate_random_block(); // Using the same randomized values across all 256 blocks
+    unsigned char* arr = generate_block(seed); // Using the same randomized values across all 256 blocks
     for (size_t i = 0; i < SETS; i++) {
         lambda[i] = malloc(sizeof(unsigned char) * BLOCK_SIZE);
 
@@ -36,7 +36,7 @@ unsigned char*** generate_lambda_sets(size_t n) {
     unsigned char*** lambdas = malloc(sizeof(unsigned char*) * n);
 
     for (size_t i = 0; i < n; i++) {
-        lambdas[i] = generate_lambda_set();
+        lambdas[i] = generate_lambda_set(i);
     }
 
     return lambdas;
