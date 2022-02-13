@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     unsigned char* key;
     size_t rounds = DEFAULT_ROUNDS;
 
-    if (argc != 3) { // first argument is executable name + path, therefore it is 3 and not 2
+    if (argc != 2) { // first argument is executable name + path, therefore it is 3 and not 2
         printf("Provide a 16 byte cipher key in hex as an argument to use it as the cipher key "
                "for the Square Attack. Continuing with sample cipher key.\n\n");
 
@@ -42,8 +42,7 @@ int main(int argc, char* argv[])
         memcpy(key, DEFAULT_CIPHER_KEY, BLOCK_SIZE);
     } else {
         // Parse the arguments as blocks, and the number of rounds
-        key = block_from_string(argv[2]);
-        rounds = strtoul(argv[3], NULL, 10);
+        key = block_from_string(argv[1]);
     }
 
     print_with_msg(key, "Encrypting lambda sets with the cipher key:");

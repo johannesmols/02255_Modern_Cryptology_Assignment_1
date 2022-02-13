@@ -12,7 +12,7 @@ unsigned char* block_from_string(const char* string) {
     for (size_t i = 0; i < BLOCK_SIZE; i++) {
         char sub_string[2], *ptr = sub_string;
         memcpy(sub_string, &string[i * 2], 2);
-        sscanf(ptr, "%2hhx", &block[i]);
+        sscanf(ptr, "%2hhx", &block[i]); // Used sscanf instead of strtoul because the latter had weird behaviour in loops for me
     }
 
     return block;
