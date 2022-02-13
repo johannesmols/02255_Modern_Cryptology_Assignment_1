@@ -86,7 +86,6 @@ unsigned char* guess_round_key(unsigned char** lambda, size_t key_pos, size_t* n
         free(values);
     }
 
-    realloc(guesses, sizeof(unsigned char) * guesses_count); // Reallocate memory according to how many correct guesses were made
     *no_of_guesses = guesses_count; // Assign no. of guesses to pointer passed in so that the caller knows the size
 
     return guesses;

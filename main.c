@@ -80,6 +80,8 @@ int main(int argc, char* argv[])
                 set_add(&new_guesses, format_str("%02x", guesses[i])); // Set implementation only supports strings, so we store it as a hex string
             }
 
+            free(guesses);
+
             if (set_length(&all_guesses[pos]) == 0) {
                 all_guesses[pos] = new_guesses; // No guessed added yet, so an intersection would be the empty set
             } else if (set_length(&new_guesses) > 0) { // Only create intersection if there are actually any new guesses
